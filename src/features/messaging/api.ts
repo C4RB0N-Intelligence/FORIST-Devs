@@ -5,7 +5,6 @@ export async function fetchConversations() {
   const userId = userData.user?.id;
   if (!userId) throw new Error("Not logged in");
 
-  // 1. Find all conversations this user is part of
   const { data: participants, error: participantError } = await supabase
     .from("conversation_participants")
     .select("conversation_id")
@@ -16,7 +15,6 @@ export async function fetchConversations() {
   const conversationIds = participants.map(p => p.conversation_id);
   if (conversationIds.length === 0) return [];
 
-  // 2. Fetch those conversations with the other participants' profiles
   const { data: convos, error: convoError } = await supabase
     .from("conversations")
     .select(`
@@ -25,13 +23,7 @@ export async function fetchConversations() {
       last_message_preview,
       last_message_at,
       conversation_participants!inner (
-        profiles (
-          id,
-          username,
-          display_name,
-          avatar_url,
-          profile_type
-        )
+        profiles ( id, username, display_name, avatar_url, profile_type )
       )
     `)
     .in("id", conversationIds)
@@ -39,9 +31,7 @@ export async function fetchConversations() {
 
   if (convoError) throw convoError;
 
-  // 3. Map to frontend format
   return convos.map((c: any) => {
-    // Filter out the current user so we only show the *other* person in the chat list
     const otherParticipants = c.conversation_participants
       .map((cp: any) => cp.profiles)
       .filter((p: any) => p.id !== userId);
@@ -62,6 +52,91 @@ export async function fetchConversations() {
   });
 }
 
+export async function fetchConversation(conversationId: string) {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Not logged in");
+
+  const { data, error } = await supabase
+    .from("conversations")
+    .select(`
+      id, type, last_message_preview, last_message_at,
+      conversation_participants!inner (
+        profiles ( id, username, display_name, avatar_url, profile_type )
+      )
+    `)
+    .eq("id", conversationId)
+    .single();
+
+  if (error) throw error;
+
+  const otherParticipants = data.conversation_participants
+    .map((cp: any) => cp.profiles)
+    .filter((p: any) => p.id !== userId);
+
+  return {
+    id: data.id,
+    type: data.type,
+    lastMessagePreview: data.last_message_preview,
+    lastMessageAt: data.last_message_at,
+    participants: otherParticipants.map((p: any) => ({
+      id: p.id,
+      handle: p.username,
+      displayName: p.display_name,
+      avatarUrl: p.avatar_url,
+      type: p.profile_type,
+    }))
+  };
+}
+
+export async function fetchMessageableProfiles() {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+
+  // Fetches all profiles except the current user's profile
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .neq("id", userId || "");
+
+  if (error) throw error;
+  
+  return data.map((p: any) => ({
+    id: p.id,
+    handle: p.username,
+    displayName: p.display_name,
+    avatarUrl: p.avatar_url,
+    type: p.profile_type,
+  }));
+}
+
+export async function startConversation(targetProfileId: string) {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Not logged in");
+
+  // 1. Create a new DM conversation
+  const { data: convo, error: convoError } = await supabase
+    .from("conversations")
+    .insert({ type: "dm" })
+    .select()
+    .single();
+    
+  if (convoError) throw convoError;
+
+  // 2. Link both users to the new conversation room
+  const { error: partError } = await supabase
+    .from("conversation_participants")
+    .insert([
+      { conversation_id: convo.id, profile_id: userId },
+      { conversation_id: convo.id, profile_id: targetProfileId }
+    ]);
+    
+  if (partError) throw partError;
+
+  return convo.id;
+}
+
 export async function fetchMessages(conversationId: string) {
   const { data, error } = await supabase
     .from("messages")
@@ -70,12 +145,7 @@ export async function fetchMessages(conversationId: string) {
       body,
       created_at,
       sender_profile_id,
-      sender:profiles!sender_profile_id (
-        id,
-        username,
-        display_name,
-        avatar_url
-      )
+      sender:profiles!sender_profile_id ( id, username, display_name, avatar_url )
     `)
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
@@ -113,7 +183,7 @@ export async function sendMessage(conversationId: string, text: string) {
 
   if (error) throw error;
 
-  // Update the conversation's last message preview
+  // Update the conversation's preview text
   await supabase
     .from("conversations")
     .update({ 
