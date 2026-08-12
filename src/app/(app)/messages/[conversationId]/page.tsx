@@ -2,7 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, MessageCircle } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,29 +10,27 @@ import { InputText } from "@/components/ui/Input";
 import { LoadingSkeleton, ErrorBanner, EmptyState } from "@/components/ui/StateViews";
 import { useConversation, useMessages, useSendMessage } from "@/features/messaging/hooks";
 import { conversationDisplayName, conversationAvatarProfile } from "@/features/messaging/utils";
-import { getProfileById } from "@/lib/mock-api/db";
-import { useSessionStore } from "@/stores/session";
 import { timeAgo } from "@/lib/utils";
-import { MessageCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-/**
- * Conversation Thread (G2) — 1:1/Group DM message thread (7.1.1, 7.1.2, 7.3).
- * Visually consistent with Chat Channel View by design — same underlying
- * no-bubble list-row message pattern (Design System Part IX/XIV Rule 4), but
- * a distinct permission model (participant list vs. community roles) and
- * moderation reach (private, platform-moderation-on-report only, per
- * architecture doc §4.6).
- */
 export default function ConversationThreadPage({ params }: { params: Promise<{ conversationId: string }> }) {
   const { conversationId } = use(params);
   const router = useRouter();
-  const activeProfileId = useSessionStore((s) => s.activeProfileId);
+  
+  // Replace missing Zustand store with real Supabase Auth state
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: summary, isLoading: loadingConversation, isError: conversationError } = useConversation(conversationId);
   const { data: messages, isLoading: loadingMessages } = useMessages(conversationId);
-  const sendMessage = useSendMessage(conversationId);
+  const sendMessage = useSendMessage();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setActiveProfileId(data.user?.id || null);
+    });
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -58,28 +56,28 @@ export default function ConversationThreadPage({ params }: { params: Promise<{ c
     );
   }
 
-  const name = conversationDisplayName(summary);
-  const avatarProfile = conversationAvatarProfile(summary);
+  const name = conversationDisplayName(summary as any);
+  const avatarProfile = conversationAvatarProfile(summary as any);
 
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.trim()) return;
-    sendMessage.mutate({ body: draft.trim(), replyToMessageId: null });
+    sendMessage.mutate({ conversationId, text: draft.trim() });
     setDraft("");
   }
 
   return (
     <div className="mx-auto flex h-screen max-w-2xl flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2 border-b border-[#E8E3DC] dark:border-[#2C2A25] px-4 py-3">
         <button
           onClick={() => router.push("/messages")}
           aria-label="Back to messages"
-          className="tap-target text-text-secondary hover:text-text-primary"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B6459] hover:bg-[#F1EEE9] hover:text-[#1C1A17] dark:text-[#B8B1A3] dark:hover:bg-[#0F0E0C] dark:hover:text-[#F2EFE9]"
         >
           <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
-        {avatarProfile && <Avatar src={avatarProfile.avatarUrl} alt={name} size="inline" isPage={avatarProfile.type === "page"} />}
-        <span className="flex items-center gap-1.5 text-body-md font-medium text-text-primary">
+        {avatarProfile && <Avatar src={avatarProfile.avatarUrl || ""} alt={name} size="inline" isPage={avatarProfile.type === "page"} />}
+        <span className="flex items-center gap-1.5 text-[15px] font-medium text-[#1C1A17] dark:text-[#F2EFE9]">
           {name}
           {avatarProfile?.verified && <VerifiedBadge />}
         </span>
@@ -92,21 +90,24 @@ export default function ConversationThreadPage({ params }: { params: Promise<{ c
           <EmptyState icon={<MessageCircle className="h-8 w-8" />} heading="No messages yet" supportingText={`Say hello to ${name}.`} />
         ) : (
           <div className="flex flex-col gap-3">
-            {messages?.map((message) => {
-              const sender = getProfileById(message.senderProfileId);
+            {messages?.map((message: any) => {
+              // We use the sender data directly from the API response now!
+              const sender = message.sender;
               if (!sender) return null;
-              const isOwn = message.senderProfileId === activeProfileId;
+              
+              const isOwn = message.senderId === activeProfileId;
+              
               return (
                 <div key={message.id} className="flex items-start gap-2">
-                  <Avatar src={sender.avatarUrl} alt={sender.displayName} size="inline" isPage={sender.type === "page"} />
+                  <Avatar src={sender.avatarUrl || ""} alt={sender.displayName} size="inline" isPage={sender.type === "page"} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-body-sm font-medium text-text-primary">
+                      <span className="text-[13px] font-medium text-[#1C1A17] dark:text-[#F2EFE9]">
                         {isOwn ? "You" : sender.displayName}
                       </span>
-                      <span className="text-caption text-text-tertiary">{timeAgo(message.createdAt)}</span>
+                      <span className="text-[11px] text-[#A39C8F] dark:text-[#736C5F]">{timeAgo(message.createdAt)}</span>
                     </div>
-                    <p className="text-body-md text-text-primary">{message.body}</p>
+                    <p className="text-[15px] text-[#1C1A17] dark:text-[#F2EFE9]">{message.body}</p>
                   </div>
                 </div>
               );
@@ -115,11 +116,11 @@ export default function ConversationThreadPage({ params }: { params: Promise<{ c
         )}
       </div>
 
-      <form onSubmit={handleSend} className="flex shrink-0 items-end gap-2 border-t border-border-subtle px-4 py-3">
+      <form onSubmit={handleSend} className="flex shrink-0 items-end gap-2 border-t border-[#E8E3DC] dark:border-[#2C2A25] px-4 py-3">
         <div className="flex-1">
           <InputText
             aria-label={`Message ${name}`}
-            placeholder="Write a message…"
+            placeholder="Write a message..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />

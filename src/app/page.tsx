@@ -1,6 +1,5 @@
 "use client";
 
-// Notice the removed curly braces around AuthCard
 import AuthCard from "@/components/auth/AuthCard";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -22,6 +21,8 @@ export default function AuthPage() {
             return;
           }
           
+          // Refresh server state to catch the new auth cookie
+          router.refresh(); 
           router.push("/feed");
         }}
         onSignUp={async (values) => {
@@ -35,6 +36,8 @@ export default function AuthPage() {
             return;
           }
           
+          // Refresh server state to catch the new auth cookie
+          router.refresh();
           router.push("/onboarding");
         }}
       />
