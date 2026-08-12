@@ -32,3 +32,20 @@ export interface Post {
   deleted?: boolean;
   removedForPolicy?: boolean;
 }
+
+export interface Conversation {
+  id: string;
+  type: "dm" | "group";
+  participantProfileIds: string[];
+  lastMessagePreview: string;
+  lastMessageAt: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderProfileId: string;
+  body: string;
+  createdAt: string;
+  replyToMessageId: string | null;
+}
