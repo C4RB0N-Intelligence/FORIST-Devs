@@ -49,3 +49,57 @@ export async function toggleFollow(targetProfileId: string, isPrivate: boolean) 
     return newStatus;
   }
 }
+
+export async function getProfileByHandle(handle: string) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("username", handle)
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    handle: data.username,
+    displayName: data.display_name,
+    avatarUrl: data.avatar_url,
+    bio: data.bio || "",
+    type: data.profile_type,
+    followerCount: 0, // You can aggregate real counts later
+    followingCount: 0,
+    isPrivate: data.profile_type === 'private',
+    verified: false,
+  };
+}
+
+export async function getProfilePosts(profileId: string) {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*, author:profiles(*)")
+    .eq("author_profile_id", profileId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return data.map((row: any) => ({
+    id: row.id,
+    type: row.type,
+    caption: row.caption,
+    mediaUrls: row.media_urls || [],
+    discussionEligible: row.discussion_eligible,
+    discussionCount: row.discussion_count,
+    ratingAvg: row.rating_avg,
+    ratingCount: row.rating_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at,
+    author: {
+      id: row.author.id,
+      handle: row.author.username,
+      displayName: row.author.display_name,
+      type: row.author.profile_type,
+      avatarUrl: row.author.avatar_url || "",
+      verified: false,
+    }
+  }));
+}

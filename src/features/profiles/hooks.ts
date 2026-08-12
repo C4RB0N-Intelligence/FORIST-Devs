@@ -1,35 +1,37 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchIsFollowing, fetchProfileByHandle, fetchProfilePosts, toggleFollow } from "./api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getFollowStatus, toggleFollow, getProfileByHandle, getProfilePosts } from "./api";
 
 export function useProfile(handle: string) {
   return useQuery({
     queryKey: ["profile", handle],
-    queryFn: () => fetchProfileByHandle(handle),
+    queryFn: () => getProfileByHandle(handle),
+    enabled: !!handle,
   });
 }
 
-export function useProfilePosts(profileId: string | undefined) {
+export function useProfilePosts(profileId?: string) {
   return useQuery({
-    queryKey: ["profile-posts", profileId],
-    queryFn: () => fetchProfilePosts(profileId as string),
-    enabled: Boolean(profileId),
+    queryKey: ["profilePosts", profileId],
+    queryFn: () => getProfilePosts(profileId!),
+    enabled: !!profileId,
   });
 }
 
-export function useFollowStatus(profileId: string | undefined) {
+export function useFollowStatus(targetProfileId?: string) {
   return useQuery({
-    queryKey: ["follow-status", profileId],
-    queryFn: () => fetchIsFollowing(profileId as string),
-    enabled: Boolean(profileId),
+    queryKey: ["followStatus", targetProfileId],
+    queryFn: () => getFollowStatus(targetProfileId!),
+    enabled: !!targetProfileId,
   });
 }
 
-export function useToggleFollow(profileId: string, isPrivateTarget: boolean) {
+export function useToggleFollow(targetProfileId: string, isPrivate: boolean) {
   const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: () => toggleFollow(profileId, isPrivateTarget),
+    mutationFn: () => toggleFollow(targetProfileId, isPrivate),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["follow-status", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["followStatus", targetProfileId] });
     },
   });
 }

@@ -20,24 +20,29 @@ export default function OnboardingPage() {
             }
 
             // 2. Insert the user's choices into your new Supabase table
-            const { error } = await supabase.from('profiles').insert({
-              id: user.id, // This links the profile to their secure auth account
-              username: result.username,
-              display_name: result.displayName,
-              avatar_url: result.avatarUrl,
-              profile_type: result.profileType,
-              interests: result.interests,
-            });
+              const { error } = await supabase.from('profiles').insert({
+                id: user.id, 
+                username: result.username,
+                display_name: result.displayName,
+                avatar_url: result.avatarUrl,
+                profile_type: result.profileType,
+                interests: result.interests,
+              });
 
-            if (error) {
-              // If they pick a username that is already taken, it will throw an error here
-              console.error("Database error:", error);
-              alert("Error saving profile. That username might be taken!");
-              return;
-            }
+              if (error) {
+                // 23505 is the Postgres error code for a Unique Constraint Violation
+                if (error.code === '23505' && error.message.includes('username')) {
+                  alert("That username is already taken. Please choose another one!");
+                  return;
+                }
+                // Fallback for any other database errors
+                console.error("Database error:", error);
+                alert("Error saving profile. Please try again.");
+                return;
+              }
 
-            // 3. Success! Route them into the app.
-            router.push("/feed"); 
+              // 3. Success! Route them into the app.
+              router.push("/feed");
             
           } catch (error) {
             console.error("Unexpected error:", error);
