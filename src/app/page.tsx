@@ -1,35 +1,41 @@
 "use client";
-import { AuthCard } from "@/components/auth";
+
+// Notice the removed curly braces around AuthCard
+import AuthCard from "@/components/auth/AuthCard";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function AuthPage() {
   const router = useRouter();
 
   return (
-    <main>
-      <AuthCard 
-        onSignUp={async (values) => {
-          const { error } = await supabase.auth.signUp({
-            email: values.email,
-            password: values.password,
-          });
-          
-          if (error) throw error; // The AuthCard will catch this and display the red error banner
-          
-          router.push("/onboarding"); // Send new users to set up their profile
-        }}
-        
+    <main className="flex min-h-screen items-center justify-center bg-[#FAF8F5] p-4 dark:bg-[#171512]">
+      <AuthCard
         onLogIn={async (values) => {
           const { error } = await supabase.auth.signInWithPassword({
             email: values.email,
             password: values.password,
           });
           
-          if (error) throw error; 
-
-          // For now, send them to the feed. Later we will add the "Onboarding Gate" logic here.
-          router.push("/feed"); 
+          if (error) {
+            alert(error.message); 
+            return;
+          }
+          
+          router.push("/feed");
+        }}
+        onSignUp={async (values) => {
+          const { error } = await supabase.auth.signUp({
+            email: values.email,
+            password: values.password,
+          });
+          
+          if (error) {
+            alert(error.message); 
+            return;
+          }
+          
+          router.push("/onboarding");
         }}
       />
     </main>
