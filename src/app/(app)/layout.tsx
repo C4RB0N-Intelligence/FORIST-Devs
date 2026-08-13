@@ -1,17 +1,26 @@
-import { DesktopSidebar } from "@/components/nav/DesktopSidebar";
-import { MobileBottomNav } from "@/components/nav/MobileBottomNav";
+"use client";
 
-/**
- * Shared shell for every authenticated route — wraps Feed, Discover,
- * Messages, Profile, etc. Adjust the route group name/path to match
- * wherever your actual pages live if it isn't `(app)`.
- */
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+import { AppNavigation } from "@/components/nav/AppNavigation";
+
+export default function AppRootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#171512]">
-      <DesktopSidebar />
-      <main className="pb-16 md:pb-0 md:pl-20 lg:pl-56">{children}</main>
-      <MobileBottomNav />
+      {/* The Global Navigation (Self-positions as Bottom Bar or Left Rail) */}
+      <AppNavigation />
+      
+      {/* 
+        Main content wrapper: 
+        - pb-16 clears the mobile bottom bar 
+        - md:pl-20 clears the tablet sidebar
+        - lg:pl-56 clears the fully expanded desktop sidebar
+      */}
+      <main className="flex h-screen flex-col overflow-hidden pb-16 md:pb-0 md:pl-20 lg:pl-56">
+        {children}
+      </main>
     </div>
   );
 }

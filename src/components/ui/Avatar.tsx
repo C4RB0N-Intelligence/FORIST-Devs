@@ -10,7 +10,7 @@ const SIZE_PX: Record<AvatarSize, number> = {
 };
 
 export interface AvatarProps {
-  src: string;
+  src?: string | null;
   alt: string;
   size?: AvatarSize;
   isPage?: boolean;
@@ -19,16 +19,27 @@ export interface AvatarProps {
 
 export function Avatar({ src, alt, size = "list", isPage, className }: AvatarProps) {
   const px = SIZE_PX[size];
+  
+  // Safely grab the first letter of the display name for our fallback
+  const initial = alt ? alt.charAt(0).toUpperCase() : "?";
+  
+  // Check if src exists and isn't just an empty string/whitespace
+  const hasImage = src && src.trim() !== "";
+
   return (
     <span
       className={cn(
-        "relative inline-block shrink-0 overflow-hidden bg-[#F1EEE9] dark:bg-[#0F0E0C]",
+        "relative flex shrink-0 items-center justify-center overflow-hidden bg-[#E8E3DC] font-medium text-[#6B6459] dark:bg-[#3D3A33] dark:text-[#B8B1A3]",
         isPage ? "rounded-lg" : "rounded-full",
         className,
       )}
-      style={{ width: px, height: px }}
+      style={{ width: px, height: px, fontSize: Math.max(12, px * 0.4) }}
     >
-      <Image src={src} alt={alt} fill sizes={`${px}px`} className="object-cover" />
+      {hasImage ? (
+        <Image src={src} alt={alt} fill sizes={`${px}px`} className="object-cover" />
+      ) : (
+        <span>{initial}</span>
+      )}
     </span>
   );
 }

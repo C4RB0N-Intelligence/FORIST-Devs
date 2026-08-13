@@ -31,7 +31,14 @@ export function useToggleFollow(targetProfileId: string, isPrivate: boolean) {
   return useMutation({
     mutationFn: () => toggleFollow(targetProfileId, isPrivate),
     onSuccess: () => {
+      // Refresh the button state
       queryClient.invalidateQueries({ queryKey: ["followStatus", targetProfileId] });
+      
+      // Refresh the profile so the Follower/Following counts instantly update!
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      
+      // Also refresh the feed so new posts instantly appear
+      queryClient.invalidateQueries({ queryKey: ["feed-posts"] });
     },
   });
 }

@@ -51,6 +51,7 @@ export async function toggleFollow(targetProfileId: string, isPrivate: boolean) 
 }
 
 export async function getProfileByHandle(handle: string) {
+  // 1. Fetch the core profile data
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -58,7 +59,25 @@ export async function getProfileByHandle(handle: string) {
     .single();
 
   if (error) throw error;
+  
+  const profileId = data.id;
 
+  // 2. Count Followers (people following this user)
+  // { count: "exact", head: true } tells Supabase to ONLY return the number, not the rows
+  const { count: followerCount } = await supabase
+    .from("follows")
+    .select("*", { count: "exact", head: true })
+    .eq("following_id", profileId)
+    .eq("status", "active");
+
+  // 3. Count Following (people this user follows)
+  const { count: followingCount } = await supabase
+    .from("follows")
+    .select("*", { count: "exact", head: true })
+    .eq("follower_id", profileId)
+    .eq("status", "active");
+
+  // 4. Return the fully populated profile
   return {
     id: data.id,
     handle: data.username,
@@ -66,8 +85,8 @@ export async function getProfileByHandle(handle: string) {
     avatarUrl: data.avatar_url,
     bio: data.bio || "",
     type: data.profile_type,
-    followerCount: 0, // You can aggregate real counts later
-    followingCount: 0,
+    followerCount: followerCount || 0,
+    followingCount: followingCount || 0,
     isPrivate: data.profile_type === 'private',
     verified: false,
   };
