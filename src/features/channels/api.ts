@@ -13,7 +13,18 @@ export async function getChannelMessages(channelId: string) {
     id: m.id,
     body: m.body,
     createdAt: m.created_at,
-    author: m.profiles
+    author: m.profiles ? {
+      id: m.profiles.id,
+      name: m.profiles.display_name,    // Translating display_name -> name
+      username: m.profiles.username,
+      avatar: m.profiles.avatar_url     // Translating avatar_url -> avatar
+    } : {
+      // A fallback just in case a profile is ever deleted
+      id: "unknown",
+      name: "Unknown User",
+      username: "unknown",
+      avatar: null
+    }
   }));
 }
 

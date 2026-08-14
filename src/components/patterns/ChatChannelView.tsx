@@ -54,8 +54,9 @@ export function ChatChannelView({ messages, onSendMessage, isLoading }: ChatChan
             {messages?.map((msg, idx) => {
               // Group messages from the same user if they are consecutive
               const isSameUser = idx > 0 && messages[idx - 1].profile_id === msg.profile_id;
-              // Depending on your API, the joined user data might be under 'author' or 'profiles'
-              const profile = msg.author || msg.profiles; 
+              
+              // We know our API sends the data inside 'author' now
+              const profile = msg.author; 
 
               return (
                 <div 
@@ -64,7 +65,7 @@ export function ChatChannelView({ messages, onSendMessage, isLoading }: ChatChan
                 >
                   <div className="w-10 shrink-0">
                     {!isSameUser && profile && (
-                      <Avatar src={profile.avatar_url} alt={profile.display_name} size="inline" />
+                      <Avatar src={profile.avatar} alt={profile.name} size="inline" />
                     )}
                   </div>
                   
@@ -72,15 +73,15 @@ export function ChatChannelView({ messages, onSendMessage, isLoading }: ChatChan
                     {!isSameUser && profile && (
                       <div className="flex items-baseline gap-2 pb-0.5">
                         <span className="text-[15px] font-semibold text-[#1C1A17] dark:text-[#F2EFE9]">
-                          {profile.display_name}
+                          {profile.name}
                         </span>
                         <span className="text-xs font-medium text-[#A39C8F] dark:text-[#736C5F]">
-                          {timeAgo(msg.created_at)}
+                          {timeAgo(msg.createdAt)}
                         </span>
                       </div>
                     )}
                     <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[#1C1A17] dark:text-[#E8E3DC]">
-                      {msg.content}
+                      {msg.body}
                     </p>
                   </div>
                 </div>

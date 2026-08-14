@@ -4,7 +4,8 @@ import {
   getCommunityByTag, 
   getCommunityMembers,
   getUserCommunities,
-  getRecommendedCommunities
+  getRecommendedCommunities,
+  searchCommunities
 } from "./api";
 
 
@@ -46,5 +47,14 @@ export function useRecommendedCommunities() {
   return useQuery({
     queryKey: ["recommended-communities"],
     queryFn: getRecommendedCommunities,
+  });
+}
+
+export function useSearchCommunities(query: string) {
+  return useQuery({
+    queryKey: ["search-communities", query],
+    queryFn: () => searchCommunities(query),
+    // Only run the query if there is actually text to search
+    enabled: query.length > 0, 
   });
 }

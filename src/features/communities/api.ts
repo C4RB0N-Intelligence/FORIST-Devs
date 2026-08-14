@@ -147,3 +147,21 @@ export async function getRecommendedCommunities() {
   if (error) throw error;
   return data;
 }
+export async function searchCommunities(query: string) {
+  if (!query) return [];
+  
+  const { data, error } = await supabase
+    .from("communities")
+    .select("*")
+    // This searches both the name and the tag for the query
+    .or(`name.ilike.%${query}%,tag.ilike.%${query}%`)
+    .eq("type", "public")
+    .limit(20);
+    
+  if (error) {
+    console.error("Search failed:", error);
+    throw error;
+  }
+  
+  return data;
+}
