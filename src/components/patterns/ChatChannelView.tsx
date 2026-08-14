@@ -52,11 +52,8 @@ export function ChatChannelView({ messages, onSendMessage, isLoading }: ChatChan
         ) : (
           <div className="flex flex-col gap-0.5">
             {messages?.map((msg, idx) => {
-              // Group messages from the same user if they are consecutive
-              const isSameUser = idx > 0 && messages[idx - 1].profile_id === msg.profile_id;
-              
-              // We know our API sends the data inside 'author' now
-              const profile = msg.author; 
+              // Group messages from the same user if they are consecutive using authorId
+              const isSameUser = idx > 0 && messages[idx - 1].authorId === msg.authorId;
 
               return (
                 <div 
@@ -64,16 +61,16 @@ export function ChatChannelView({ messages, onSendMessage, isLoading }: ChatChan
                   className={`group flex gap-3 px-2 py-1 hover:bg-[#F1EEE9]/50 dark:hover:bg-[#0F0E0C]/50 ${!isSameUser ? "mt-4" : ""}`}
                 >
                   <div className="w-10 shrink-0">
-                    {!isSameUser && profile && (
-                      <Avatar src={profile.avatar} alt={profile.name} size="inline" />
+                    {!isSameUser && (
+                      <Avatar src={msg.authorAvatarUrl} alt={msg.authorName || "User"} size="inline" />
                     )}
                   </div>
                   
                   <div className="flex min-w-0 flex-col">
-                    {!isSameUser && profile && (
+                    {!isSameUser && (
                       <div className="flex items-baseline gap-2 pb-0.5">
                         <span className="text-[15px] font-semibold text-[#1C1A17] dark:text-[#F2EFE9]">
-                          {profile.name}
+                          {msg.authorName}
                         </span>
                         <span className="text-xs font-medium text-[#A39C8F] dark:text-[#736C5F]">
                           {timeAgo(msg.createdAt)}
@@ -102,7 +99,6 @@ export function ChatChannelView({ messages, onSendMessage, isLoading }: ChatChan
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
-              // Allow Enter to send, Shift+Enter for new line
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend(e);

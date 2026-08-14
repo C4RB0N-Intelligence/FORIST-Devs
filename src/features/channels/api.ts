@@ -1,31 +1,36 @@
 import { supabase } from "@/lib/supabase";
 
+// 1. We create a single formatter so ALL messages look identical to the UI
+const formatMessage = (m: any) => ({
+  id: m.id,
+  body: m.body,
+  createdAt: m.created_at,
+  profile_id: m.profile_id, // We need this for the isSameUser grouping!
+  author: m.profiles ? {
+    id: m.profiles.id,
+    name: m.profiles.display_name,
+    username: m.profiles.username,
+    avatar: m.profiles.avatar_url
+  } : {
+    id: "unknown",
+    name: "Unknown User",
+    username: "unknown",
+    avatar: null
+  }
+});
+
 export async function getChannelMessages(channelId: string) {
   const { data, error } = await supabase
     .from("channel_messages")
-    .select("id, body, created_at, profiles(id, username, display_name, avatar_url)")
+    // Added profile_id to the select string!
+    .select("id, body, created_at, profile_id, profiles(id, username, display_name, avatar_url)")
     .eq("channel_id", channelId)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
 
-  return data.map((m: any) => ({
-    id: m.id,
-    body: m.body,
-    createdAt: m.created_at,
-    author: m.profiles ? {
-      id: m.profiles.id,
-      name: m.profiles.display_name,    // Translating display_name -> name
-      username: m.profiles.username,
-      avatar: m.profiles.avatar_url     // Translating avatar_url -> avatar
-    } : {
-      // A fallback just in case a profile is ever deleted
-      id: "unknown",
-      name: "Unknown User",
-      username: "unknown",
-      avatar: null
-    }
-  }));
+  // 2. Format the historical messages
+  return data.map(formatMessage);
 }
 
 export async function sendChannelMessage({ channelId, body }: { channelId: string; body: string }) {
@@ -35,9 +40,12 @@ export async function sendChannelMessage({ channelId, body }: { channelId: strin
   const { data, error } = await supabase
     .from("channel_messages")
     .insert({ channel_id: channelId, profile_id: userData.user.id, body })
-    .select()
+    // Added the exact same select string here so new messages get the profile data too!
+    .select("id, body, created_at, profile_id, profiles(id, username, display_name, avatar_url)")
     .single();
 
   if (error) throw error;
-  return data;
+  
+  // 3. Format the brand new message
+  return formatMessage(data);
 }
