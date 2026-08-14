@@ -58,25 +58,28 @@ export async function getCommunityByTag(tag: string) {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
 
-  // 1. Fetch community details
   const { data: community, error: communityError } = await supabase
     .from("communities")
     .select("*")
-    .ilike("tag", tag) // Case-insensitive match
+    .ilike("tag", tag)
     .single();
 
-  if (communityError) throw communityError;
+  if (communityError) {
+    console.error("Failed to fetch community:", communityError);
+    throw communityError;
+  }
 
-  // 2. Fetch the channels for this community
   const { data: channels, error: channelsError } = await supabase
     .from("channels")
     .select("*")
     .eq("community_id", community.id)
     .order("created_at", { ascending: true });
 
-  if (channelsError) throw channelsError;
+  if (channelsError) {
+    console.error("Failed to fetch channels:", channelsError);
+    throw channelsError;
+  }
 
-  // 3. Check if the current user is a member
   let isMember = false;
   let userRole = null;
 

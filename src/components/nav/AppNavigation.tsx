@@ -12,9 +12,9 @@ interface NavDestination {
 }
 
 const DESTINATIONS: NavDestination[] = [
-  { href: "/discover", label: "Discover", icon: Compass },
   { href: "/feed", label: "Feed", icon: Home },
   { href: "/communities", label: "Communities", icon: Users },
+  { href: "/discover", label: "Discover", icon: Compass },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/profile", label: "You", icon: User },
 ];

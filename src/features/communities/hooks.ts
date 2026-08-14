@@ -1,5 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCommunity, getCommunityByTag, getCommunityMembers } from "./api";
+import { 
+  createCommunity, 
+  getCommunityByTag, 
+  getCommunityMembers,
+  getUserCommunities,
+  getRecommendedCommunities
+} from "./api";
+
 
 export function useCreateCommunity() {
   const queryClient = useQueryClient();
